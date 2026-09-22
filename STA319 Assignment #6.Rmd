@@ -1,0 +1,492 @@
+---
+title: "Stat 319- Assignment #6"
+author: "Francine Lohose"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: yes
+    fig_width: 3
+    fig_height: 3
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{css, echo = FALSE}
+#TOC::before {
+  content: "Table of Contents";
+  font-weight: bold;
+  font-size: 1.2em;
+  display: block;
+  color: navy;
+  margin-bottom: 10px;
+}
+
+
+/* Center all plots and images */
+img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.figure {
+  text-align: center;
+}
+
+/* Clean up body spacing */
+body {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #222222;
+  background-color: white;
+  max-width: 960px;
+  margin: auto;
+}
+
+/* Add space between sections */
+h1, h2, h3, h4 {
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+
+/* Clean paragraph spacing */
+p {
+  margin-bottom: 12px;
+  background-color: white;
+}
+
+/* Make tables centered */
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Add a subtle line under h1 headers */
+h1 {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 6px;
+}
+
+
+div#TOC li {     /* table of content  */
+    list-style:upper-roman;
+    background-image:none;
+    background-repeat:none;
+    background-position:0;
+}
+
+h1.title {    /* level 1 header of title  */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+
+h4.author { /* Header 4 - and the author and data headers use this too  */
+  font-size: 15px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+
+h4.date { /* Header 4 - and the author and data headers use this too  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: "Gill Sans", sans-serif;
+  color: DarkBlue;
+  text-align: center;
+}
+
+h1 { /* Header 1 - and the author and data headers use this too  */
+    font-size: 20px;
+    font-weight: bold;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+h2 { /* Header 2 - and the author and data headers use this too  */
+    font-size: 18px;
+    font-weight: bold;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h3 { /* Header 3 - and the author and data headers use this too  */
+    font-size: 16px;
+    font-weight: bold;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - and the author and data headers use this too  */
+    font-size: 14px;
+  font-weight: bold;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+/* Add dots after numbered headers */
+.header-section-number::after {
+  content: ".";
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+}
+```
+
+
+``` {r setup, include=F}
+
+knitr::opts_chunk$set(fig.align  = 'center',
+                      fig.width  = 6,
+                      fig.height = 4,
+                      message    = FALSE,
+                      warning    = FALSE,
+                      comment    = NA)
+
+setwd("~/Documents/West Chester University/Spring 2026/STAT 319/Homework")
+
+data=read.csv("WNBA_2025_box-scores.csv" , header=TRUE)
+
+
+library(ggplot2)
+library(dplyr) 
+
+##VIF Function in the car package
+library(car)
+library(olsrr)
+library(kableExtra)
+
+# Theme for all ggplot2 graphs
+theme_set(theme_classic() +
+  theme(plot.title  = element_text(hjust = 0.5, face = "bold", size = 12),
+        axis.title  = element_text(size = 11),
+        axis.text   = element_text(size = 10),
+        legend.position = "top"))
+
+```
+
+
+
+```{r wranging, include=F}
+summary(data)
+library(dplyr)
+
+##All WNBA teams included, remove score from all star game
+data=data %>%
+  filter(team_name != "Team WNBA" & team_name != "Team USA")
+
+#For each team, calcultate the average and sd of point_scored, rebounds, fied_goal, three_point and steals
+  summary_score = data %>%
+  group_by(team_name) %>%
+  summarize(mean_score=mean(team_score),sd_score=sd(team_score),
+           mean_rebounds= mean(total_rebounds), sd_rebounds=sd(total_rebounds),
+           mean_field=mean(field_goal_pct),sd_field=sd(field_goal_pct),
+           mean_total=mean(total_rebounds),sd_total=sd(total_rebounds),
+           mean_three=mean(three_point_field_goal_pct),sd_three=sd(three_point_field_goal_pct),
+           mean_steals=mean(steals),sd_steals=sd(steals))
+  
+#Keep only Sun games 
+my_team = data %>% 
+  select(team_score, field_goal_pct, total_rebounds, 
+         three_point_field_goal_pct, steals, team_name, team_winner, opponent_team_name, game_date) %>%
+  filter (team_name == "Sun")
+
+
+#Add a Win/Loss label so we can color the hist. by game result
+  my_team_by_result = my_team %>%
+     mutate(result=case_when(team_winner == TRUE ~ "win", 
+                          team_winner == FALSE ~ "loss")) %>%
+  group_by(result) %>%
+  summarise(mean=mean(team_score), sd=sd(team_score))
+  
+  df_hist = data %>%
+  filter(team_name == "Sun") %>%
+  mutate(result=case_when(team_winner == TRUE ~ "win", 
+                          team_winner == FALSE ~ "loss"))
+  
+```
+
+# Tables
+## Introduction
+
+This analysis uses the 2025 WNBA box score dataset, where each observation represents one team's performance in a single game. After removing All-Star game entries, the dataset contains regular-season and playoff records across all 12 franchises. The Connecticut Sun is the focal team for this analysis. The objective is to build and evaluate a multiple linear regression model that identifies which game-level statistics, field goal percentage, total rebounds, three-point percentage, and steals, are significant predictors of points scored.
+```{r tables, include=T}
+
+#This table shows the average and standard deviation of each stat for all 12 WNBA Teams
+summary_score %>%
+  kbl(caption = "Table 1. Per-Game Averages and Standard Deviations by Team", digits = 2, 
+      align = "c",
+      col.names = c("Team", 
+                    "Mean Score", "SD Score",
+                    "Mean Rebounds", "SD Rebounds",
+                    "Mean FG%", "SD FG%",
+                    "Mean Reb", "SD Reb",
+                    "Mean 3P%", "SD 3P%",
+                    "Mean Steals", "SD Steals")) %>%
+#Style the table1
+  kable_styling(full_width = FALSE,
+                html_font = "Times New Roman",
+                bootstrap_options = c("striped", "hover", "condensed", "bordered"),
+                position = "center",
+                font_size = 13) %>%
+  row_spec(0, bold = TRUE, 
+               color = "white", 
+               background = "#4D4D4D") %>%
+  column_spec(1, bold = TRUE, color = "#4D4D4D")
+#This table shows whether the Sun scored more on average in wins compared to losses
+my_team_by_result %>%
+   kbl(caption = "Table 2. Connecticut Sun Mean Points Scored by Game Result", digits = 2, 
+      align = "c",
+      col.names = c("Team", 
+                    "Mean Score", "SD Score")) %>%
+#Style the table2
+  kable_styling(full_width = FALSE,
+                html_font = "Times New Roman",
+                bootstrap_options = c("striped", "hover", "condensed", "bordered"),
+                position = "center",
+                font_size = 13) %>%
+  row_spec(0, bold = TRUE, 
+               color = "white", 
+               background = "#4D4D4D") %>%
+  column_spec(1, bold = TRUE, color = "#4D4D4D")
+```
+
+
+# Graphs 
+
+## Box Plot
+Based on the boxplot, the mean points scored in wins is higher than in losses, suggesting that the Sun tend to score more in games they win. There is also one visible outlier in the win group, indicating an unusually high scoring game.
+
+```{r graphs, include=T, fig.width=6,fig.height=4, comment=NA, message=F}
+# Boxplot of points scored by game result
+boxplot(team_score ~ result, data = df_hist,
+        col = c("lightblue", "lightgreen"),
+        main = "Points Scored by Game Result — Connecticut Sun (2025)",
+        xlab = "Result",
+        ylab = "Points Scored")
+```
+
+
+
+```{r First Order Model, include=F}
+#First Order Model (no interactions) with 4 terms 
+#We are predicting team_score using four predictors
+model1 = lm(team_score ~ field_goal_pct + total_rebounds + 
+             three_point_field_goal_pct + steals, data = my_team)
+summary(model1)
+
+##Test for Multicollinearity 
+#Check multicollinearity using linear correlation
+predictors = my_team %>%
+  select(field_goal_pct, total_rebounds, 
+             three_point_field_goal_pct, steals)
+cor_data = data %>% 
+  select(team_score, field_goal_pct, total_rebounds, 
+         three_point_field_goal_pct, steals)
+
+cor(cor_data)
+
+#Check multicollinearity using VIF
+vif(model1)
+
+#Model 2 -Full Interaction Model 
+#This model tests whether two predictors work together to affect scoring
+model2 = lm(team_score ~ field_goal_pct + total_rebounds + 
+             three_point_field_goal_pct + steals, data = my_team)
+summary(model2)
+```
+# First Order Model 
+
+## Model1
+
+F(4,42)= 11.06 with p-value= 3.225e-06, which is less than 0.15, therefore we reject the null hypothesis. The model as a whole is statistically significant. The Adjusted R-squared is 0.4666 meaning 46.66% of the variation in points scored is explained by the four predictors together. 
+
+## Coefficient Interpretation 
+
+As the field goal percentage goes up by 1, the Sun increases by 1.11 points. The p-value is 6.82e-05, significant.
+$~$
+As the total rebounds goes up by 1, the Sun increases by 0.04 points. The p-value is 0.888, not significant 
+$~$
+As the three point field goal percentage goes up by 1, the Sun increases by 0.16 points. The p-value is 0.167, not significant
+$~$
+As the steals goes up by 1, the Sun increases by 0.25 points,. The p-value is 0.486, not significant
+
+## Model2 
+In Model 1, all four predictors field goal percentage, total rebounds, three-point field goal percentage, and steals were statistically significant at the 15% significance level, as all p-values were below α = 0.15. Since no terms needed to be removed, Model 2 retains the same predictors as Model 1 and serves as the foundation for building the full interaction model in Model 3.
+
+## Multicollinearity 
+All VIF values are below 5, indicating no multicollinearity problem among the predictors. 
+Field_goal_pct=1.56
+$~$
+Total_rebounds=1.33
+$~$
+Three_point_field_goal_pct=1.47
+$~$
+Steals=1.25
+
+```{r Interaction Model, results= 'asis', echo=F, include=F, comment=NA} 
+#Model3 -Trimmed Interaction Model
+#Keep only the interaction terms that were significant in Model2
+model3 = lm(team_score ~ field_goal_pct + total_rebounds + 
+             three_point_field_goal_pct + steals +
+             field_goal_pct*total_rebounds +
+            field_goal_pct*three_point_field_goal_pct+
+            field_goal_pct*steals +
+            total_rebounds*three_point_field_goal_pct +
+            total_rebounds*steals + 
+            three_point_field_goal_pct*steals  , data = my_team)
+summary(model3)
+
+#Model 4 — Final Model
+#The best model based on Adjusted R² and p-values
+model4 = lm(team_score ~ field_goal_pct + total_rebounds + 
+             three_point_field_goal_pct + steals  +
+            field_goal_pct*three_point_field_goal_pct+
+            total_rebounds*three_point_field_goal_pct +
+            three_point_field_goal_pct*steals  , data = my_team)
+model4sum = summary(model4)
+```
+
+$~$
+
+# Interaction Model
+
+## Model3
+Adding interactions did improve the Adjusted R-squared. 
+$~$
+Model 2 had an Adjusted-squared of 0.4666, meaning 46.66% of the variation in points scored is explained by the four predictors alone. Model 3 increased that to 0.5652, meaning 56.52% of the variation is now explained once interactions are included. The following interaction terms have a p-value less than 0.15:
+$~$
+- The interaction between field_goal_pct and three_point_field_goal_pct is significant because the p-value is 0.000904, which is less than α= 0.15, therefore we reject the null hypothesis.
+$~$
+- The interaction between total_rebounds and three_point_field_goal_pct is significant because the p-value is 0.059952, which is less than α= 0.15, therefore we reject the null hypothesis. 
+$~$
+- The interaction between three_point_field_goal_pct and steals is significant because the p-value is 0.113752, which is less than 0.15, therefore we reject the null hypothesis. 
+
+## Model4
+In Model 3,I kept the interactions between field_goal_pct and three_point_field_goal_pct,total_rebounds and three_point_field_goal_pct, three_point_field_goal_pct and steals, since all had p-values below α= 0.15. 
+$~$
+I dropped all others interactions because their p-values exceeded α = 0.15,and were therefore not significant. Model 4 is my final choice because it retains only the significant interaction terms, the Adjusted-squared remained nearly unchanged going from 0.5652 in Model 3 to 0.5645 in Model 4, and the model is simpler, easier to interpret, and provides a better overall fit.
+
+## Model Summary -In line code
+
+
+My final model is team_score= `r model4$coefficients[1]` + `r model4$coefficients[2]` * field_goal_pct + `r model4$coefficients[3]` * total_rebounds + `r model4$coefficients[4]` * three_point_field_goal_pct + `r model4$coefficients[5]`* steals + `r model4$coefficients[6]` * field_goal_pct * three_point_field_goal_pct + `r model4$coefficients[7]`* total_rebounds * three_point_field_goal_pct + `r model4$coefficients[8]` * three_point_field_goal_pct * steals
+
+This model significantly predicts team score, f(`r model4sum$fstatistic[2]`, `r model4sum$fstatistic[2]`) = `r model4sum$fstatistic[1]`, p<.0001, adjusted R^2= `r model4sum$adj.r.squared`
+
+# Residual Analysis
+
+## Normality 
+The residual histogram looks like a bell curve and is centered close to zero. There is a small tail on the right side, but it is not a big concern. Based on this, the normality assumption is satisfied.
+
+## Constant Variance
+The residuals vs. fitted values plot shows no clear pattern or funnel shape.
+The points are scattered randomly around zero across all fitted values.Based on this, the equal variance assumption is satisfied.
+
+
+## Outliers
+All observations fall within the threshold between -3 and 3, meaning there are no outliers. The model fits the data well across all games.
+
+## Influential Observations
+The Cook's Distance chart identifies 4 games that have a disproportionate effect on the model's coefficients. These correspond to games played on 
+August 16th, 2024 against Wing, July 07th, 2024 against Mercury, June 23th, 2024 against Storm and May 05th, 2024 against Mystics. The leverage plot further confirms 4 influential points on the right side and 1 outlier on the left side, corresponding to the game on June 27, 2024 against Mystics 
+Despite these influential observations, the model remains reliable as the residual assumptions are largely satisfied.
+
+```{r Residuals, include=T}
+#Residual checks for Model4
+
+#(1)Residual Histogram 
+ols_plot_resid_hist(model4)
+main="Residual Histogram"
+xlab="Residuals"
+ylab="Frequency"
+
+#(2)Residuals vs. Fitted Plot 
+ols_plot_resid_fit(model4)
+main="Residuals vs. Fitted"
+xlab="Fitted Values"
+ylab="Residuals"
+
+#(3)Studentized Residuals
+ols_plot_resid_stud(model4)
+main="Studentized Residuals vs Fitted"
+xlab="Observation"
+ylab="Studentized Residuals"
+
+#(4)Cook's Distance
+ols_plot_cooksd_chart(model4)
+main="Cook's Distance"
+xlab="Observation"
+ylab="Cook's Distance"
+
+#(5)laverage
+ols_plot_resid_lev(model4)
+main="Leverage"
+xlab="Leverage"
+ylab="Studentized Residuals"
+
+graphics.off()
+```
+
+
+```{r, include=T, echo=F, results='asis', comment=NA, message=F}
+# Formatted HTML table for Model 4
+library(stargazer)
+stargazer(model4, type= "html")
+```
+
+
+```{r Prediction, include=F}
+#Use Model4 to predict the Sun's score for a specific game scenario
+#Experimental Region
+
+newdata=data.frame(field_goal_pct=45.4, total_rebounds=34, three_point_field_goal_pct=36, steals=7)
+
+#Generate predicted score with 95% confidence interval
+prediction = predict(model4, newdata, interval = "confidence", level=.95)
+prediction
+
+#Check experimental region
+summary(my_team)
+summary(cor_data)
+```
+# Prediction
+
+## Predicted Score
+
+Using the median values for all predictors: field goal percentage of 43.90, total rebounds of 34, three-point field goal percentage of 33.30, and steals of 7.39. Model 4 predicts the Sun would score 79.86 points. The 95% confidence interval ranges from 77.41 to 82.32 points. We are 95% confident that the Sun would score between 77.41 and 82.32 points.
+$~$
+I built the model to predict my team's point for a game in which they achieve the median value for each variable. The predicted score is `r prediction[1]`, with 95% confidence interval [`r prediction [2]`, `r prediction [3]`]
+
+## Experimental Region
+The valid ranges are: field goal percentage (35.10 to 57.60), total rebounds (26 to 45), three-point field goal percentage (10.00 to 60.90), and steals (1 to 14). Since all median values fall within these ranges, the prediction is trustworthy.

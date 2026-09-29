@@ -1,5 +1,5 @@
 ---
-title: "Stat 319- Assignment #6"
+title: "Course project for STAT 319 (Applied Statistics), Spring 2026"
 author: "Francine Lohose"
 date: "`r Sys.Date()`"
 output:

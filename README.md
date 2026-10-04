@@ -13,7 +13,6 @@ A base model with four predictors explained ~47% of scoring variation (Adjusted 
 
 ## Files
 - `wnba_sun_scoring_model.Rmd`: full analysis (data wrangling, models, residual checks, prediction)
-- `wnba_sun_scoring_model.html`: knitted report (download and open in a browser to view)
 - `WNBA_2025_box-scores.csv`: the dataset
 
 ## Tools
